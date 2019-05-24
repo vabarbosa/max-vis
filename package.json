@@ -2,7 +2,7 @@
   "name": "max-viz-utils",
   "version": "0.0.1",
   "description": "Visualization utilities for deep learning models.",
-  "main": "index.js",
+  "main": "src/max-viz-utils.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
