@@ -57,8 +57,6 @@ let objMap = {}
 OBJ_LIST.forEach((x,i)=> objMap[x]=i)
 const OBJ_MAP = objMap
 
-const getColor = pixel => COLOR_LIST[pixel % COLOR_LIST.length]
-
 // Bounding Boxes
 
 // Label Generation
