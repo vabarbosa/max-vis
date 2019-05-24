@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/kastentx/max-viz-utils/issues"
   },
-  "homepage": "https://github.com/kastentx/max-viz-utils#readme"
+  "homepage": "https://github.com/kastentx/max-viz-utils#readme",
+  "dependencies": {
+    "jimp": "^0.6.4"
+  }
 }
