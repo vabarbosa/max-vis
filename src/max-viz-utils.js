@@ -1,7 +1,9 @@
 // MAX Image Segmenter ColorMap
+const MAX_IMGSEG_SIZE = 512
+
 export const getColorMap = async (imageData, modelData) => {
   let canvas = await Jimp.read(imageData)
-  canvas.scaleToFit(MAX_SIZE,MAX_SIZE)
+  canvas.scaleToFit(MAX_IMGSEG_SIZE,MAX_IMGSEG_SIZE)
   const flatSegMap = modelData.reduce((a, b) => a.concat(b), [])
   const objTypes = [...new Set(flatSegMap)].map(x => OBJ_LIST[x])
   const segments = objTypes.map(type => {
@@ -56,11 +58,58 @@ let objMap = {}
 OBJ_LIST.forEach((x,i)=> objMap[x]=i)
 const OBJ_MAP = objMap
 
+// MAX Human Pose Estimator
+const MAX_HPOSE_SIZE = 432
+
+export const getPoseLines = async (imageData, modelData) => {
+    const canvas = await Jimp.read(imageData);
+    canvas.scaleToFit(MAX_HPOSE_SIZE, MAX_HPOSE_SIZE)
+    //const padSize = getPadSize(width);
+    const padSize = 2;
+    modelData.map(obj => obj.poseLines).forEach((skeleton, i) => {
+        skeleton.forEach((line, i) => {
+            // LINE GENERATION
+            const xMin = line[0];
+            const yMin = line[1];
+            const xMax = line[2];
+            const yMax = line[3];
+            drawLine(canvas, xMin, yMin, xMax, yMax, padSize, 'cyan'); 
+        });
+    });
+    const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO));
+    let binary = fixBinary(atob(base64));
+    let blob = new Blob([binary], {type: 'image/png'});
+    return { 
+      blob,
+      width: canvas.bitmap.width,
+      height: canvas.bitmap.height
+    }
+}
+
 // Bounding Boxes
 
 // Label Generation
 
 // Basic Draw Methods
+const drawLine = (img, xMin, yMin, xMax, yMax, padSize, color) => {
+  const xLength = Math.abs(xMax - xMin);
+  const yLength = Math.abs(yMax - yMin);
+  const steps = xLength > yLength ? xLength : yLength;
+  const xStep = (xMax - xMin) / steps;
+  const yStep = (yMax - yMin) / steps;
+  let x = xMin;
+  let y = yMin;
+  for (let s of range(0, steps)) {
+    x = x + xStep;
+    y = y + yStep;
+    for (let i of range(x - padSize, x + padSize)) {
+      img.setPixelColor(Jimp.cssColorToHex(color), i, y);
+    }
+    for (let j of range(y - padSize, y + padSize)) {
+      img.setPixelColor(Jimp.cssColorToHex(color), x, j);
+    }  
+  }
+}
 
 // Basic Utility Functions
 const flatten = (a) => Array.isArray(a) ? [].concat(...a.map(flatten)) : a
@@ -79,18 +128,22 @@ const fixBinary = (bin) => {
   return buf
 }
 
-const getScaledSize = ({ height, width }) => {
+const getScaledSize = ({ height, width }, maxSize) => {
   if (width > height) {
     return {
-      scaledWidth: MAX_SIZE,
-      scaledHeight: Math.round((height / width) * MAX_SIZE)
+      scaledWidth: maxSize,
+      scaledHeight: Math.round((height / width) * maxSize)
     }      
   } else {
     return {
-      scaledWidth: Math.round((width / height) * MAX_SIZE),
-      scaledHeight: MAX_SIZE
+      scaledWidth: Math.round((width / height) * maxSize),
+      scaledHeight: maxSize
     }      
   }
 }
 
-const MAX_SIZE = 512
+function* range(start, end) {
+  for (let i = start; i <= end; i++) {
+      yield i;
+  }
+}
