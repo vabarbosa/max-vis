@@ -1,4 +1,3 @@
-
 // MAX Image Segmenter ColorMap
 export const getColorMap = async (imageData, modelData) => {
   let canvas = await Jimp.read(imageData)
