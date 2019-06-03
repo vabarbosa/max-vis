@@ -73,6 +73,7 @@ export const getPoseLines = async (imageData, modelData) => {
             const yMin = line[1];
             const xMax = line[2];
             const yMax = line[3];
+            // need to add something here to switch colors between skeletons
             drawLine(canvas, xMin, yMin, xMax, yMax, padSize, 'cyan'); 
         });
     });
@@ -87,6 +88,43 @@ export const getPoseLines = async (imageData, modelData) => {
 }
 
 // Bounding Boxes
+
+// NEW CODE
+export const getObjectBoxes = async (imageData, modelData) => {
+  const canvas = await Jimp.read(imageData)
+  const { width, height } = canvas.bitmap
+  let fontType = getScaledFont(width, 'black');
+  console.log('start font load')
+  const font = await Jimp.loadFont('https://raw.githubusercontent.com/kastentx/max-viz-utils/master/fonts/open-sans/open-sans-32-black/open-sans-32-black.fnt');
+  console.log('end font load')
+  // const padSize = getPadSize(width);
+  const padSize = 2;
+  modelData.map(obj => obj.detection_box).forEach((box, i) => {
+      const xMax = box[3] * width;
+      const xMin = box[1] * width;
+      const yMax = box[2] * height;
+      const yMin = box[0] * height;
+      rect(canvas, xMin, yMin, xMax, yMax, padSize, 'cyan');
+      // LABEL GENERATION
+      const text = modelData[i].label;
+      const textHeight = Jimp.measureTextHeight(font, text);
+      const xTagMax = Jimp.measureText(font, text) + (padSize*2) + xMin;
+      const yTagMin = yMin - textHeight > 0 ? yMin - textHeight : yMin;
+      rectFill(canvas, xMin, yTagMin, xTagMax, textHeight + yTagMin, padSize, 'cyan');
+      canvas.print(font, xMin + padSize, yTagMin, text);
+  });
+  // return canvas.getBase64Async(Jimp.AUTO);
+  const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO));
+  let binary = fixBinary(atob(base64));
+  let blob = new Blob([binary], {type: 'image/png'});
+  return { 
+    blob,
+    width: canvas.bitmap.width,
+    height: canvas.bitmap.height
+  }
+}
+
+
 
 // Label Generation
 
@@ -111,6 +149,26 @@ const drawLine = (img, xMin, yMin, xMax, yMax, padSize, color) => {
   }
 }
 
+// NEW CODE
+const rect = (img, xMin, yMin, xMax, yMax, padSize, color) => 
+  drawRect(img, xMin, yMin, xMax, yMax, padSize, color, false);
+
+const rectFill = (img, xMin, yMin, xMax, yMax, padSize, color) => 
+  drawRect(img, xMin, yMin, xMax, yMax, padSize, color, true);
+
+const drawRect = (img, xMin, yMin, xMax, yMax, padSize, color, isFilled) => {
+  for (let x of range(xMin, xMax)) {
+    for (let y of range(yMin, yMax)) { 
+      if (withinRange(y, yMin, padSize) || withinRange(x, xMin, padSize) || 
+          withinRange(y, yMax, padSize) || withinRange(x, xMax, padSize)) {
+        img.setPixelColor(Jimp.cssColorToHex(color), x, y);
+      } else if (isFilled && (y <= (yMax + padSize) && x <= (xMax + padSize))) {
+        img.setPixelColor(Jimp.cssColorToHex(color), x, y);
+      }
+    }
+  }
+}
+
 // Basic Utility Functions
 const flatten = (a) => Array.isArray(a) ? [].concat(...a.map(flatten)) : a
 
@@ -126,6 +184,15 @@ const fixBinary = (bin) => {
     arr[i] = bin.charCodeAt(i)
   }
   return buf
+}
+
+const getScaledFont = (width, color) => {
+  if (width > 1600)
+    return color === 'black' ? Jimp.FONT_SANS_128_BLACK : Jimp.FONT_SANS_128_WHITE;
+  else if (width > 700)
+    return color === 'black' ? Jimp.FONT_SANS_32_BLACK : Jimp.FONT_SANS_32_WHITE;
+  else
+  return color === 'black' ? Jimp.FONT_SANS_16_BLACK : Jimp.FONT_SANS_16_WHITE;
 }
 
 const getScaledSize = ({ height, width }, maxSize) => {
@@ -147,3 +214,6 @@ function* range(start, end) {
       yield i;
   }
 }
+
+const withinRange = (i, line, range) =>
+  (line-range<=i) && (i<=line+range);
