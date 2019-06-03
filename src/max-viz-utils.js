@@ -93,9 +93,10 @@ export const getPoseLines = async (imageData, modelData) => {
 export const getObjectBoxes = async (imageData, modelData) => {
   const canvas = await Jimp.read(imageData)
   const { width, height } = canvas.bitmap
-  let fontType = getScaledFont(width, 'black');
+  //let fontType = getScaledFont(width, 'black');
   console.log('start font load')
   const font = await Jimp.loadFont('https://raw.githubusercontent.com/kastentx/max-viz-utils/master/fonts/open-sans/open-sans-32-black/open-sans-32-black.fnt');
+  //const font = await Jimp.loadFont(fontType);
   console.log('end font load')
   // const padSize = getPadSize(width);
   const padSize = 2;
@@ -110,6 +111,7 @@ export const getObjectBoxes = async (imageData, modelData) => {
       const textHeight = Jimp.measureTextHeight(font, text);
       const xTagMax = Jimp.measureText(font, text) + (padSize*2) + xMin;
       const yTagMin = yMin - textHeight > 0 ? yMin - textHeight : yMin;
+      // need to add something here to switch colors between boxes?
       rectFill(canvas, xMin, yTagMin, xTagMax, textHeight + yTagMin, padSize, 'cyan');
       canvas.print(font, xMin + padSize, yTagMin, text);
   });
@@ -119,14 +121,17 @@ export const getObjectBoxes = async (imageData, modelData) => {
   let blob = new Blob([binary], {type: 'image/png'});
   return { 
     blob,
+    objects: modelData.map(obj => obj.label),
     width: canvas.bitmap.width,
     height: canvas.bitmap.height
   }
 }
 
 
-
 // Label Generation
+
+
+
 
 // Basic Draw Methods
 const drawLine = (img, xMin, yMin, xMax, yMax, padSize, color) => {
