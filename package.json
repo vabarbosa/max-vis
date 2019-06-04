@@ -1,6 +1,6 @@
 {
   "name": "max-viz-utils",
-  "version": "0.0.24",
+  "version": "0.0.25",
   "description": "Visualization utilities for deep learning models.",
   "main": "dist/bundle.js",
   "jsdelivr": "dist/bundle.js",

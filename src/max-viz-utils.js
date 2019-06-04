@@ -89,7 +89,7 @@ export const getPoseLines = async (imageData, modelData) => {
 
 // Bounding Boxes
 
-// NEW CODE
+// Object Detector Bounding Box
 export const getObjectBoxes = async (imageData, modelData) => {
   const canvas = await Jimp.read(imageData)
   const { width, height } = canvas.bitmap
@@ -115,7 +115,6 @@ export const getObjectBoxes = async (imageData, modelData) => {
       rectFill(canvas, xMin, yTagMin, xTagMax, textHeight + yTagMin, padSize, 'cyan');
       canvas.print(font, xMin + padSize, yTagMin, text);
   });
-  // return canvas.getBase64Async(Jimp.AUTO);
   const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO));
   let binary = fixBinary(atob(base64));
   let blob = new Blob([binary], {type: 'image/png'});
@@ -125,6 +124,34 @@ export const getObjectBoxes = async (imageData, modelData) => {
     width: canvas.bitmap.width,
     height: canvas.bitmap.height
   }
+}
+
+// Object Detector Cropping Boxes
+export const cropObjectBoxes = async (imageData, modelData) => {
+  const source = await Jimp.read(imageData)
+  let cropList = []
+  
+  modelData.map(obj => ({ box: obj.detection_box, label: obj.label }))
+    .forEach(async (bBox, i) => {
+      const canvas = source.clone();
+      const { width, height } = canvas.bitmap;
+      const { box, label } = bBox;
+      const xMax = box[3] * width;
+      const xMin = box[1] * width;
+      const yMax = box[2] * height;
+      const yMin = box[0] * height;
+      cropRect(canvas, xMin, yMin, xMax, yMax);
+      const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO));
+      let binary = fixBinary(atob(base64));
+      let blob = new Blob([binary], {type: 'image/png'});
+      cropList.push({
+        blob,
+        width,
+        height,
+        label
+      });
+    });
+    return cropList
 }
 
 
@@ -172,6 +199,12 @@ const drawRect = (img, xMin, yMin, xMax, yMax, padSize, color, isFilled) => {
       }
     }
   }
+}
+
+const cropRect = (img, xMin, yMin, xMax, yMax) => {
+  const rectHeight = yMax - yMin
+  const rectWidth = xMax - xMin
+  img.crop(xMin, yMin, rectWidth, rectHeight)
 }
 
 // Basic Utility Functions
