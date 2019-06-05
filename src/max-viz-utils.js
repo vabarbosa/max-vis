@@ -1,10 +1,10 @@
 // MAX Image Segmenter ColorMap
 const MAX_IMGSEG_SIZE = 512
 
-export const getColorMap = async (imageData, modelData) => {
+export const getColorMap = async (imageData, segmentMap) => {
   let canvas = await Jimp.read(imageData)
   canvas.scaleToFit(MAX_IMGSEG_SIZE,MAX_IMGSEG_SIZE)
-  const flatSegMap = modelData.reduce((a, b) => a.concat(b), [])
+  const flatSegMap = segmentMap.reduce((a, b) => a.concat(b), [])
   const objTypes = [...new Set(flatSegMap)].map(x => OBJ_LIST[x])
   const segments = objTypes.map(type => {
     return {
@@ -61,12 +61,12 @@ const OBJ_MAP = objMap
 // MAX Human Pose Estimator
 const MAX_HPOSE_SIZE = 432
 
-export const getPoseLines = async (imageData, modelData) => {
+export const getPoseLines = async (imageData, poseData) => {
     const canvas = await Jimp.read(imageData);
     canvas.scaleToFit(MAX_HPOSE_SIZE, MAX_HPOSE_SIZE)
     //const padSize = getPadSize(width);
     const padSize = 2;
-    modelData.map(obj => obj.poseLines).forEach((skeleton, i) => {
+    poseData.map(obj => obj.poseLines).forEach((skeleton, i) => {
         skeleton.forEach((line, i) => {
             // LINE GENERATION
             const xMin = line[0];
@@ -90,7 +90,7 @@ export const getPoseLines = async (imageData, modelData) => {
 // Bounding Boxes
 
 // Object Detector Bounding Box
-export const getObjectBoxes = async (imageData, modelData) => {
+export const getObjectBoxes = async (imageData, boxData) => {
   const canvas = await Jimp.read(imageData)
   const { width, height } = canvas.bitmap
   //let fontType = getScaledFont(width, 'black');
@@ -100,14 +100,14 @@ export const getObjectBoxes = async (imageData, modelData) => {
   console.log('end font load')
   // const padSize = getPadSize(width);
   const padSize = 2;
-  modelData.map(obj => obj.detection_box).forEach((box, i) => {
+  boxData.map(obj => obj.detection_box).forEach((box, i) => {
       const xMax = box[3] * width;
       const xMin = box[1] * width;
       const yMax = box[2] * height;
       const yMin = box[0] * height;
       rect(canvas, xMin, yMin, xMax, yMax, padSize, 'cyan');
       // LABEL GENERATION
-      const text = modelData[i].label;
+      const text = boxData[i].label;
       const textHeight = Jimp.measureTextHeight(font, text);
       const xTagMax = Jimp.measureText(font, text) + (padSize*2) + xMin;
       const yTagMin = yMin - textHeight > 0 ? yMin - textHeight : yMin;
@@ -120,18 +120,18 @@ export const getObjectBoxes = async (imageData, modelData) => {
   let blob = new Blob([binary], {type: 'image/png'});
   return { 
     blob,
-    objects: modelData.map(obj => obj.label),
+    objects: boxData.map(obj => obj.label),
     width: canvas.bitmap.width,
     height: canvas.bitmap.height
   }
 }
 
 // Object Detector Cropping Boxes
-export const cropObjectBoxes = async (imageData, modelData) => {
+export const cropObjectBoxes = async (imageData, boxData) => {
   const source = await Jimp.read(imageData)
   let cropList = []
   
-  modelData.map(obj => ({ box: obj.detection_box, label: obj.label }))
+  boxData.map(obj => ({ box: obj.detection_box, label: obj.label }))
     .forEach(async (bBox, i) => {
       const canvas = source.clone();
       const { width, height } = canvas.bitmap;
