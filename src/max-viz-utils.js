@@ -61,30 +61,28 @@ const OBJ_MAP = objMap
 // MAX Human Pose Estimator
 const MAX_HPOSE_SIZE = 432
 
-export const getPoseLines = async (imageData, poseData) => {
-    const canvas = await Jimp.read(imageData);
-    canvas.scaleToFit(MAX_HPOSE_SIZE, MAX_HPOSE_SIZE)
-    //const padSize = getPadSize(width);
-    const padSize = 2;
-    poseData.map(obj => obj.poseLines).forEach((skeleton, i) => {
-        skeleton.forEach((line, i) => {
-            // LINE GENERATION
-            const xMin = line[0];
-            const yMin = line[1];
-            const xMax = line[2];
-            const yMax = line[3];
-            // need to add something here to switch colors between skeletons
-            drawLine(canvas, xMin, yMin, xMax, yMax, padSize, 'cyan'); 
-        });
-    });
-    const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO));
-    let binary = fixBinary(atob(base64));
-    let blob = new Blob([binary], {type: 'image/png'});
-    return { 
-      blob,
-      width: canvas.bitmap.width,
-      height: canvas.bitmap.height
-    }
+export const getPoseLines = async (imageData, poseData, colorName) => {
+  const canvas = await Jimp.read(imageData)
+  canvas.scaleToFit(MAX_HPOSE_SIZE, MAX_HPOSE_SIZE)
+  const padSize = 2
+  poseData.map(obj => obj.poseLines).forEach((skeleton, i) => {
+    const lineColor = colorName || getColorName(i)
+    skeleton.forEach(line => {
+      const xMin = line[0]
+      const yMin = line[1]
+      const xMax = line[2]
+      const yMax = line[3]
+      drawLine(canvas, xMin, yMin, xMax, yMax, padSize, lineColor)
+    })
+  })
+  const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO))
+  let binary = fixBinary(atob(base64))
+  let blob = new Blob([binary], {type: 'image/png'})
+  return { 
+    blob,
+    width: canvas.bitmap.width,
+    height: canvas.bitmap.height
+  }
 }
 
 // Bounding Boxes
@@ -101,19 +99,19 @@ export const getObjectBoxes = async (imageData, boxData) => {
   // const padSize = getPadSize(width);
   const padSize = 2;
   boxData.map(obj => obj.detection_box).forEach((box, i) => {
-      const xMax = box[3] * width;
-      const xMin = box[1] * width;
-      const yMax = box[2] * height;
-      const yMin = box[0] * height;
-      rect(canvas, xMin, yMin, xMax, yMax, padSize, 'cyan');
-      // LABEL GENERATION
-      const text = boxData[i].label;
-      const textHeight = Jimp.measureTextHeight(font, text);
-      const xTagMax = Jimp.measureText(font, text) + (padSize*2) + xMin;
-      const yTagMin = yMin - textHeight > 0 ? yMin - textHeight : yMin;
-      // need to add something here to switch colors between boxes?
-      rectFill(canvas, xMin, yTagMin, xTagMax, textHeight + yTagMin, padSize, 'cyan');
-      canvas.print(font, xMin + padSize, yTagMin, text);
+    const xMax = box[3] * width;
+    const xMin = box[1] * width;
+    const yMax = box[2] * height;
+    const yMin = box[0] * height;
+    rect(canvas, xMin, yMin, xMax, yMax, padSize, 'cyan');
+    // LABEL GENERATION
+    const text = boxData[i].label;
+    const textHeight = Jimp.measureTextHeight(font, text);
+    const xTagMax = Jimp.measureText(font, text) + (padSize*2) + xMin;
+    const yTagMin = yMin - textHeight > 0 ? yMin - textHeight : yMin;
+    // need to add something here to switch colors between boxes?
+    rectFill(canvas, xMin, yTagMin, xTagMax, textHeight + yTagMin, padSize, 'cyan');
+    canvas.print(font, xMin + padSize, yTagMin, text);
   });
   const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO));
   let binary = fixBinary(atob(base64));
@@ -249,7 +247,7 @@ const getScaledSize = ({ height, width }, maxSize) => {
 
 function* range(start, end) {
   for (let i = start; i <= end; i++) {
-      yield i;
+    yield i;
   }
 }
 
