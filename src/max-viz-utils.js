@@ -88,34 +88,33 @@ export const getPoseLines = async (imageData, poseData, colorName) => {
 // Bounding Boxes
 
 // Object Detector Bounding Box
-export const getObjectBoxes = async (imageData, boxData) => {
+export const getObjectBoxes = async (imageData, boxData, boxColor, fontColor, fontSize, linePad) => {
   const canvas = await Jimp.read(imageData)
   const { width, height } = canvas.bitmap
-  //let fontType = getScaledFont(width, 'black');
   console.log('start font load')
-  const font = await Jimp.loadFont('https://raw.githubusercontent.com/kastentx/max-viz-utils/master/fonts/open-sans/open-sans-32-black/open-sans-32-black.fnt');
-  //const font = await Jimp.loadFont(fontType);
+  let textColor = fontColor === 'white' ? 'white' : 'black'
+  let textSize = ['8', '16', '32', '64', '128'].includes(String(fontSize)) ? fontSize : '32'
+  const font = await Jimp.loadFont(`https://raw.githubusercontent.com/kastentx/max-viz-utils/master/fonts/open-sans/open-sans-${textSize}-${textColor}/open-sans-${textSize}-${textColor}.fnt`)
   console.log('end font load')
-  // const padSize = getPadSize(width);
-  const padSize = 2;
+  const padSize = linePad || 2
   boxData.map(obj => obj.detection_box).forEach((box, i) => {
-    const xMax = box[3] * width;
-    const xMin = box[1] * width;
-    const yMax = box[2] * height;
-    const yMin = box[0] * height;
-    rect(canvas, xMin, yMin, xMax, yMax, padSize, 'cyan');
+    const lineColor = boxColor || getColorName(i)
+    const xMax = box[3] * width
+    const xMin = box[1] * width
+    const yMax = box[2] * height
+    const yMin = box[0] * height
+    rect(canvas, xMin, yMin, xMax, yMax, padSize, lineColor)
     // LABEL GENERATION
-    const text = boxData[i].label;
-    const textHeight = Jimp.measureTextHeight(font, text);
-    const xTagMax = Jimp.measureText(font, text) + (padSize*2) + xMin;
-    const yTagMin = yMin - textHeight > 0 ? yMin - textHeight : yMin;
-    // need to add something here to switch colors between boxes?
-    rectFill(canvas, xMin, yTagMin, xTagMax, textHeight + yTagMin, padSize, 'cyan');
-    canvas.print(font, xMin + padSize, yTagMin, text);
-  });
-  const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO));
-  let binary = fixBinary(atob(base64));
-  let blob = new Blob([binary], {type: 'image/png'});
+    const text = boxData[i].label
+    const textHeight = Jimp.measureTextHeight(font, text)
+    const xTagMax = Jimp.measureText(font, text) + (padSize * 2) + xMin
+    const yTagMin = yMin - textHeight > 0 ? yMin - textHeight : yMin
+    rectFill(canvas, xMin, yTagMin, xTagMax, textHeight + yTagMin, padSize, lineColor)
+    canvas.print(font, xMin + padSize, yTagMin, text)
+  })
+  const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO))
+  let binary = fixBinary(atob(base64))
+  let blob = new Blob([binary], { type: 'image/png' })
   return { 
     blob,
     objects: boxData.map(obj => obj.label),
@@ -131,69 +130,66 @@ export const cropObjectBoxes = async (imageData, boxData) => {
   
   boxData.map(obj => ({ box: obj.detection_box, label: obj.label }))
     .forEach(async (bBox, i) => {
-      const canvas = source.clone();
-      const { width, height } = canvas.bitmap;
-      const { box, label } = bBox;
-      const xMax = box[3] * width;
-      const xMin = box[1] * width;
-      const yMax = box[2] * height;
-      const yMin = box[0] * height;
-      cropRect(canvas, xMin, yMin, xMax, yMax);
-      const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO));
-      let binary = fixBinary(atob(base64));
-      let blob = new Blob([binary], {type: 'image/png'});
+      const canvas = source.clone()
+      const { width, height } = canvas.bitmap
+      const { box, label } = bBox
+      const xMax = box[3] * width
+      const xMin = box[1] * width
+      const yMax = box[2] * height
+      const yMin = box[0] * height
+      cropRect(canvas, xMin, yMin, xMax, yMax)
+      const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO))
+      let binary = fixBinary(atob(base64))
+      let blob = new Blob([binary], { type: 'image/png' })
       cropList.push({
         blob,
         width,
         height,
         label
-      });
-    });
+      })
+    })
     return cropList
 }
-
 
 // Label Generation
 
 
-
-
 // Basic Draw Methods
 const drawLine = (img, xMin, yMin, xMax, yMax, padSize, color) => {
-  const xLength = Math.abs(xMax - xMin);
-  const yLength = Math.abs(yMax - yMin);
-  const steps = xLength > yLength ? xLength : yLength;
-  const xStep = (xMax - xMin) / steps;
-  const yStep = (yMax - yMin) / steps;
-  let x = xMin;
-  let y = yMin;
+  const xLength = Math.abs(xMax - xMin)
+  const yLength = Math.abs(yMax - yMin)
+  const steps = xLength > yLength ? xLength : yLength
+  const xStep = (xMax - xMin) / steps
+  const yStep = (yMax - yMin) / steps
+  let x = xMin
+  let y = yMin
   for (let s of range(0, steps)) {
-    x = x + xStep;
-    y = y + yStep;
+    x = x + xStep
+    y = y + yStep
     for (let i of range(x - padSize, x + padSize)) {
-      img.setPixelColor(Jimp.cssColorToHex(color), i, y);
+      img.setPixelColor(Jimp.cssColorToHex(color), i, y)
     }
     for (let j of range(y - padSize, y + padSize)) {
-      img.setPixelColor(Jimp.cssColorToHex(color), x, j);
+      img.setPixelColor(Jimp.cssColorToHex(color), x, j)
     }  
   }
 }
 
 // NEW CODE
 const rect = (img, xMin, yMin, xMax, yMax, padSize, color) => 
-  drawRect(img, xMin, yMin, xMax, yMax, padSize, color, false);
+  drawRect(img, xMin, yMin, xMax, yMax, padSize, color, false)
 
 const rectFill = (img, xMin, yMin, xMax, yMax, padSize, color) => 
-  drawRect(img, xMin, yMin, xMax, yMax, padSize, color, true);
+  drawRect(img, xMin, yMin, xMax, yMax, padSize, color, true)
 
 const drawRect = (img, xMin, yMin, xMax, yMax, padSize, color, isFilled) => {
   for (let x of range(xMin, xMax)) {
     for (let y of range(yMin, yMax)) { 
       if (withinRange(y, yMin, padSize) || withinRange(x, xMin, padSize) || 
           withinRange(y, yMax, padSize) || withinRange(x, xMax, padSize)) {
-        img.setPixelColor(Jimp.cssColorToHex(color), x, y);
+        img.setPixelColor(Jimp.cssColorToHex(color), x, y)
       } else if (isFilled && (y <= (yMax + padSize) && x <= (xMax + padSize))) {
-        img.setPixelColor(Jimp.cssColorToHex(color), x, y);
+        img.setPixelColor(Jimp.cssColorToHex(color), x, y)
       }
     }
   }
@@ -224,11 +220,11 @@ const fixBinary = (bin) => {
 
 const getScaledFont = (width, color) => {
   if (width > 1600)
-    return color === 'black' ? Jimp.FONT_SANS_128_BLACK : Jimp.FONT_SANS_128_WHITE;
+    return color === 'black' ? Jimp.FONT_SANS_128_BLACK : Jimp.FONT_SANS_128_WHITE
   else if (width > 700)
-    return color === 'black' ? Jimp.FONT_SANS_32_BLACK : Jimp.FONT_SANS_32_WHITE;
+    return color === 'black' ? Jimp.FONT_SANS_32_BLACK : Jimp.FONT_SANS_32_WHITE
   else
-  return color === 'black' ? Jimp.FONT_SANS_16_BLACK : Jimp.FONT_SANS_16_WHITE;
+  return color === 'black' ? Jimp.FONT_SANS_16_BLACK : Jimp.FONT_SANS_16_WHITE
 }
 
 const getScaledSize = ({ height, width }, maxSize) => {
@@ -247,9 +243,9 @@ const getScaledSize = ({ height, width }, maxSize) => {
 
 function* range(start, end) {
   for (let i = start; i <= end; i++) {
-    yield i;
+    yield i
   }
 }
 
 const withinRange = (i, line, range) =>
-  (line-range<=i) && (i<=line+range);
+  (line-range<=i) && (i<=line+range)
