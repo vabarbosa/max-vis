@@ -1,14 +1,15 @@
 // MAX Image Segmenter ColorMap
 const MAX_IMGSEG_SIZE = 512
 
-export const getColorMap = async (imageData, segmentMap) => {
+export const getColorMap = async (imageData, segmentMap, options) => {
   let canvas = await Jimp.read(imageData)
   canvas.scaleToFit(MAX_IMGSEG_SIZE,MAX_IMGSEG_SIZE)
   const flatSegMap = segmentMap.reduce((a, b) => a.concat(b), [])
   const objTypes = [...new Set(flatSegMap)].map(x => OBJ_LIST[x])
   const segments = objTypes.map(type => {
     return {
-      [type] : getColor(OBJ_LIST.indexOf(type))
+      object: type,
+      color: getColorName(OBJ_LIST.indexOf(type))
     }
   })  
   const data = canvas.bitmap.data
@@ -61,18 +62,19 @@ const OBJ_MAP = objMap
 // MAX Human Pose Estimator
 const MAX_HPOSE_SIZE = 432
 
-export const getPoseLines = async (imageData, poseData, colorName) => {
+export const getPoseLines = async (imageData, poseData, options) => {
+  const { lineColor, linePad } = options
   const canvas = await Jimp.read(imageData)
   canvas.scaleToFit(MAX_HPOSE_SIZE, MAX_HPOSE_SIZE)
-  const padSize = 2
+  const padSize = linePad || 2
   poseData.map(obj => obj.poseLines).forEach((skeleton, i) => {
-    const lineColor = colorName || getColorName(i)
+    const colorName = lineColor || getColorName(i)
     skeleton.forEach(line => {
       const xMin = line[0]
       const yMin = line[1]
       const xMax = line[2]
       const yMax = line[3]
-      drawLine(canvas, xMin, yMin, xMax, yMax, padSize, lineColor)
+      drawLine(canvas, xMin, yMin, xMax, yMax, padSize, colorName)
     })
   })
   const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO))
@@ -88,8 +90,15 @@ export const getPoseLines = async (imageData, poseData, colorName) => {
 // Bounding Boxes
 
 // Object Detector Bounding Box
-export const getObjectBoxes = async (imageData, boxData, boxColor, fontColor, fontSize, linePad) => {
+export const getObjectBoxes = async (imageData, boxData, options) => {
+  const { lineColor, linePad, fontColor, fontSize, modelType } = options
   const canvas = await Jimp.read(imageData)
+  const objectMap = boxData.map((obj, i) => {
+    return {
+      object: obj.label,
+      color : getColorName(i)
+    }
+  })  
   const { width, height } = canvas.bitmap
   console.log('start font load')
   let textColor = fontColor === 'white' ? 'white' : 'black'
@@ -98,18 +107,15 @@ export const getObjectBoxes = async (imageData, boxData, boxColor, fontColor, fo
   console.log('end font load')
   const padSize = linePad || 2
   boxData.map(obj => obj.detection_box).forEach((box, i) => {
-    const lineColor = boxColor || getColorName(i)
-    const xMax = box[3] * width
-    const xMin = box[1] * width
-    const yMax = box[2] * height
-    const yMin = box[0] * height
-    rect(canvas, xMin, yMin, xMax, yMax, padSize, lineColor)
+    const boxColor = lineColor || getColorName(i)
+    const { xMin, xMax, yMin, yMax } = getBoxCoords(box, modelType, width, height)
+    rect(canvas, xMin, yMin, xMax, yMax, padSize, boxColor)
     // LABEL GENERATION
     const text = boxData[i].label
     const textHeight = Jimp.measureTextHeight(font, text)
     const xTagMax = Jimp.measureText(font, text) + (padSize * 2) + xMin
     const yTagMin = yMin - textHeight > 0 ? yMin - textHeight : yMin
-    rectFill(canvas, xMin, yTagMin, xTagMax, textHeight + yTagMin, padSize, lineColor)
+    rectFill(canvas, xMin, yTagMin, xTagMax, textHeight + yTagMin, padSize, boxColor)
     canvas.print(font, xMin + padSize, yTagMin, text)
   })
   const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO))
@@ -117,14 +123,15 @@ export const getObjectBoxes = async (imageData, boxData, boxColor, fontColor, fo
   let blob = new Blob([binary], { type: 'image/png' })
   return { 
     blob,
-    objects: boxData.map(obj => obj.label),
+    objects: objectMap,
     width: canvas.bitmap.width,
     height: canvas.bitmap.height
   }
 }
 
 // Object Detector Cropping Boxes
-export const cropObjectBoxes = async (imageData, boxData) => {
+export const cropObjectBoxes = async (imageData, boxData, options) => {
+  const { modelType } = options
   const source = await Jimp.read(imageData)
   let cropList = []
   
@@ -133,10 +140,7 @@ export const cropObjectBoxes = async (imageData, boxData) => {
       const canvas = source.clone()
       const { width, height } = canvas.bitmap
       const { box, label } = bBox
-      const xMax = box[3] * width
-      const xMin = box[1] * width
-      const yMax = box[2] * height
-      const yMin = box[0] * height
+      const { xMin, xMax, yMin, yMax } = getBoxCoords(box, modelType, width, height)
       cropRect(canvas, xMin, yMin, xMax, yMax)
       const base64 = URLtoB64(await canvas.getBase64Async(Jimp.AUTO))
       let binary = fixBinary(atob(base64))
@@ -175,7 +179,6 @@ const drawLine = (img, xMin, yMin, xMax, yMax, padSize, color) => {
   }
 }
 
-// NEW CODE
 const rect = (img, xMin, yMin, xMax, yMax, padSize, color) => 
   drawRect(img, xMin, yMin, xMax, yMax, padSize, color, false)
 
@@ -202,6 +205,25 @@ const cropRect = (img, xMin, yMin, xMax, yMax) => {
 }
 
 // Basic Utility Functions
+const getBoxCoords = (box, modelType, width, height) => {
+  if (modelType === 'facial-recognizer') {
+    return {
+      xMax: box[2],
+      xMin: box[0],
+      yMax: box[3],
+      yMin: box[1]
+    }
+  } else {
+    return {
+      xMax: box[3] * width,
+      xMin: box[1] * width,
+      yMax: box[2] * height,
+      yMin: box[0] * height
+    }
+  }
+}
+
+
 const flatten = (a) => Array.isArray(a) ? [].concat(...a.map(flatten)) : a
 
 const B64toURL = base64 => `data:image/png;base64,${base64}`
@@ -225,20 +247,6 @@ const getScaledFont = (width, color) => {
     return color === 'black' ? Jimp.FONT_SANS_32_BLACK : Jimp.FONT_SANS_32_WHITE
   else
   return color === 'black' ? Jimp.FONT_SANS_16_BLACK : Jimp.FONT_SANS_16_WHITE
-}
-
-const getScaledSize = ({ height, width }, maxSize) => {
-  if (width > height) {
-    return {
-      scaledWidth: maxSize,
-      scaledHeight: Math.round((height / width) * maxSize)
-    }      
-  } else {
-    return {
-      scaledWidth: Math.round((width / height) * maxSize),
-      scaledHeight: maxSize
-    }      
-  }
 }
 
 function* range(start, end) {
