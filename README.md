@@ -10,6 +10,26 @@ Currently the list of supported models includes:
 - `MAX Facial Age Estimator`
 - `MAX Facial Emotion Classifier`
 
+![A MAX Object Detector example](./img/example.png)
+
+## Getting Started
+
+To use these functions in a web app, you can import the library by inserting the following line into your HTML:
+``` html
+<script src="https://cdn.jsdelivr.net/npm/max-viz-utils@0.0.40"></script>
+```
+After this resource has been loaded, you can access all of the functions on the `maxVizUtils` object.  
+
+For example: 
+``` js
+const objectBoxes = await maxVizUtils.getObjectBoxes(imageData, prediction.predictions, vizOptions)  
+```
+
+Alternatively, you can install this library in a Node.js project with NPM, using the following command:
+``` bash
+$ npm install max-viz-utils
+```
+
 ## Uses
 
 ### MAX Image Segmenter
@@ -39,3 +59,12 @@ These utility functions accept an optional third parameter called `options` that
   - default: `32`
 - `modelType`: a string containing the name of the type of MAX model. This is used to determine the structure of the model payload and build bounding boxes appropriately. Choose from `object-detector`, `facial-recognizer`, `facial-age-estimator`, `facial-emotion-classifier`
   - default: `object-detector`
+
+## Examples
+
+To see these functions in action, visit the following CodePen demos to see what they can do. Feel free to fork the pens for yourself and extend them with your own enhancements!
+
+- [MAX Image Segmenter (TF.js)](https://codepen.io/kastentx/pen/OYvEeY)
+- [MAX Human Pose Estimator (TF.js)](https://codepen.io/kastentx/pen/QRZWNV)
+- [MAX Object Detector - Bounding Boxes](https://codepen.io/kastentx/pen/MdLMLG)
+- [MAX Object Detector - Cropping Boxes](https://codepen.io/kastentx/pen/GaeayB)
