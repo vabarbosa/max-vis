@@ -1,7 +1,7 @@
 // MAX Image Segmenter ColorMap
 const MAX_IMGSEG_SIZE = 512
 
-export const getColorMap = async (imageData, segmentMap, options) => {
+export const getColorMap = async (imageData, segmentMap, options={ }) => {
   let canvas = await Jimp.read(imageData)
   canvas.scaleToFit(MAX_IMGSEG_SIZE,MAX_IMGSEG_SIZE)
   const flatSegMap = segmentMap.reduce((a, b) => a.concat(b), [])
@@ -50,7 +50,8 @@ const COLOR_NAMES = Object.keys(COLOR_MAP)
 const getColor = pixel => COLOR_LIST[pixel % COLOR_LIST.length]
 const getColorName = pixel => COLOR_NAMES[pixel % COLOR_NAMES.length]
 
-const OBJ_LIST = ['background', 'airplane', 'bicycle', 'bird', 'boat', 
+const OBJ_LIST = [
+  'background', 'airplane', 'bicycle', 'bird', 'boat', 
   'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'dining table', 
   'dog', 'horse', 'motorbike', 'person', 'potted plant', 'sheep', 
   'sofa', 'train', 'tv'
@@ -62,7 +63,7 @@ const OBJ_MAP = objMap
 // MAX Human Pose Estimator
 const MAX_HPOSE_SIZE = 432
 
-export const getPoseLines = async (imageData, poseData, options) => {
+export const getPoseLines = async (imageData, poseData, options={ }) => {
   const { lineColor, linePad } = options
   const canvas = await Jimp.read(imageData)
   canvas.scaleToFit(MAX_HPOSE_SIZE, MAX_HPOSE_SIZE)
@@ -90,13 +91,13 @@ export const getPoseLines = async (imageData, poseData, options) => {
 // Bounding Boxes
 
 // Object Detector Bounding Box
-export const getObjectBoxes = async (imageData, boxData, options) => {
+export const getObjectBoxes = async (imageData, boxData, options={ }) => {
   const { lineColor, linePad, fontColor, fontSize, modelType } = options
   const canvas = await Jimp.read(imageData)
   const objectMap = boxData.map((obj, i) => {
     return {
       object: obj.label,
-      color : getColorName(i)
+      color : lineColor || getColorName(i)
     }
   })  
   const { width, height } = canvas.bitmap
@@ -106,12 +107,13 @@ export const getObjectBoxes = async (imageData, boxData, options) => {
   const font = await Jimp.loadFont(`https://raw.githubusercontent.com/kastentx/max-viz-utils/master/fonts/open-sans/open-sans-${textSize}-${textColor}/open-sans-${textSize}-${textColor}.fnt`)
   console.log('end font load')
   const padSize = linePad || 2
+  const modelName = modelType || 'object-detector'
   boxData.map(obj => obj.detection_box).forEach((box, i) => {
-    const boxColor = lineColor || getColorName(i)
-    const { xMin, xMax, yMin, yMax } = getBoxCoords(box, modelType, width, height)
+    const boxColor = objectMap[i].color
+    const { xMin, xMax, yMin, yMax } = getBoxCoords(box, modelName, width, height)
     rect(canvas, xMin, yMin, xMax, yMax, padSize, boxColor)
     // LABEL GENERATION
-    const text = boxData[i].label
+    const text = getBoxLabel(boxData[i], modelName)
     const textHeight = Jimp.measureTextHeight(font, text)
     const xTagMax = Jimp.measureText(font, text) + (padSize * 2) + xMin
     const yTagMin = yMin - textHeight > 0 ? yMin - textHeight : yMin
@@ -130,7 +132,7 @@ export const getObjectBoxes = async (imageData, boxData, options) => {
 }
 
 // Object Detector Cropping Boxes
-export const cropObjectBoxes = async (imageData, boxData, options) => {
+export const cropObjectBoxes = async (imageData, boxData, options={ }) => {
   const { modelType } = options
   const source = await Jimp.read(imageData)
   let cropList = []
@@ -223,6 +225,17 @@ const getBoxCoords = (box, modelType, width, height) => {
   }
 }
 
+const getBoxLabel = (boxData, modelType) => {
+  if (modelType === 'object-detector') {
+    return boxData.label
+  } else if (modelType === 'facial-age-estimator') {
+    return boxData.age_estimation
+  } else if (modelType === 'facial-emotion-classifier') {
+    return boxData.emotion_predictions[0].label
+  } else if (modelType === 'facial-recognizer') {
+    return ''
+  }
+}
 
 const flatten = (a) => Array.isArray(a) ? [].concat(...a.map(flatten)) : a
 
