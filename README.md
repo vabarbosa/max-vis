@@ -22,6 +22,8 @@ After this resource has been loaded, you can access all of the functions on the 
 
 For example: 
 ``` js
+// get model response...
+const prediction = await response.json()
 const objectBoxes = await maxVizUtils.getObjectBoxes(imageData, prediction.predictions, vizOptions)  
 ```
 
@@ -33,20 +35,72 @@ $ npm install max-viz-utils
 ## Uses
 
 ### MAX Image Segmenter
- - `getColorMap(imageData, segmentMap, options)`
+#### `getColorMap(imageData, segmentMap, options)`
    - this function takes an image and the corresponding segment map contained in the model payload, and returns the annotated colormap image.
+   
+#### Response Payload
+- `blob` - a blob containing the annotated image output 
+- `segments` - an array containing the name and color of each segment
+- `width` - the width of the annotated image output
+- `height` - the height of the annotated image output
+
+#### Available Options: 
+- (none)
+
+<hr />
 
 ### MAX Human Pose Estimator
- - `getPoseLines(imageData, poseData, options)`
+#### `getPoseLines(imageData, poseData, options)`
    - this function takes an image with the corresponding detected poses contained in the model payload and returns an annotated image with drawn pose lines.
+   
+#### Response Payload
+- `blob` - a blob containing the annotated image output 
+- `width` - the width of the annotated image output
+- `height` - the height of the annotated image output
 
-### MAX Object Detector
- - `getObjectBoxes(imageData, boxData, options)`
+#### Available Options: 
+- `lineColor`
+- `linePad`
+
+<hr />
+
+### MAX Object & Facial Detector Models
+#### `getObjectBoxes(imageData, boxData, options)`
    - this function takes an image and the corresponding detected objects contained in the model payload, and returns an annotated image with drawn bounding boxes.
- - `cropObjectBoxes(imageData, boxData, options)`
+   
+#### Response Payload
+- `blob` - a blob containing the annotated image output 
+- `objects` - an array containing the name and color of each object box
+- `width` - the width of the annotated image output
+- `height` - the height of the annotated image output
+   
+#### Available Options: 
+- `lineColor`
+- `linePad`
+- `fontColor`
+- `fontSize`
+- `modelType`   
+   
+ #### `cropObjectBoxes(imageData, boxData, options)`
    - this function takes an image and the corresponding detected objects contained in the model payload, and returns an array of cropped images with metadata.
 
-## Customizing the Output
+#### Response Payload
+- This function returns an array, with each element containing the following:
+- `blob` - a blob containing the cropped object box image 
+- `label` - the name of the cropped object
+- `width` - the width of the cropped image output
+- `height` - the height of the cropped image output
+
+#### Available Options: 
+- `lineColor`
+- `linePad`
+- `fontColor`
+- `fontSize`
+- `modelType`
+
+<hr />
+
+## Customizing the Annotations (Options)
 
 These utility functions accept an optional third parameter called `options` that can handle the following values:
 - `lineColor`: a string containing the name of any valid CSS color. Sets the color of annotations. 
