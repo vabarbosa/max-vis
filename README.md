@@ -14,11 +14,12 @@ Currently the list of supported models includes:
 
 ## Getting Started
 
-To use these functions in a web app, you can import the library by inserting the following line into your HTML:
+To use these functions in a web app, you can import the library and necessary dependencies by inserting the following into your HTML:
 ``` html
+<script src="https://cdn.jsdelivr.net/npm/jimp"></script>
 <script src="https://cdn.jsdelivr.net/npm/max-viz-utils@0.0.40"></script>
 ```
-After this resource has been loaded, you can access all of the functions on the `maxVizUtils` object.  
+After these resources have been loaded, you can access all of the functions on the `maxVizUtils` object.  
 
 For example: 
 ``` js
@@ -27,9 +28,9 @@ const prediction = await response.json()
 const objectBoxes = await maxVizUtils.getObjectBoxes(imageData, prediction.predictions, vizOptions)  
 ```
 
-Alternatively, you can install this library in a Node.js project with NPM, using the following command:
+Alternatively you can install this library and Jimp (a dependency) in a Node.js project with NPM, using the following command:
 ``` bash
-$ npm install max-viz-utils
+$ npm install max-viz-utils jimp
 ```
 
 ## Uses
