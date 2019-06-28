@@ -1,8 +1,8 @@
 # DEPRECATED
 
 **`max-viz-utils` has been replaced by `@codait/max-vis`.  
-Please use [@codait/max-vis](https://www.npmjs.com/package/@codait/max-vis) instead.  
-See https://github.com/CODAIT/max-vis**
+Please check out [@codait/max-vis](https://www.npmjs.com/package/@codait/max-vis).  
+https://github.com/CODAIT/max-vis**
 
 [![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
 
